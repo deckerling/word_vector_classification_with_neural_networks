@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <algorithm>
+#include <forward_list>
 #include <fstream>
 #include <functional>
 #include <random>
@@ -79,8 +80,8 @@ ConvolutionalNetwork::ConvolutionalNetwork(const std::vector<std::vector<std::ve
     std::cout << "average-pooling";
   }
   std::cout << '\n' << '\t' << "Stride: 1" << '\n' << '\t' << "Padding: zero padding" << '\n' << '\t' << "No biases will be used in the convolutional layers!" << '\n' << '\t' << "Sizes of fully-connected layers: ";
-  for (unsigned i = 0; i < fully_connected_layer_sizes_.size(); ++i)
-    std::cout << fully_connected_layer_sizes_[i] << ((i == (fully_connected_layer_sizes_.size()-1))? '\n' : '/');
+  for (auto it = fully_connected_layer_sizes_.begin(); it != fully_connected_layer_sizes_.end(); ++it)
+    std::cout << *it << ((it == std::prev(fully_connected_layer_sizes_.end()))? '\n' : '/');
   std::cout << '\t' << "Epochs: " << epochs_ << '\n' << '\t' << "Mini-batch size: " << mini_batch_size_ << '\n' << '\t' << "Lambda: " << lambda_ << '\n' << '\t' << "Learning rate (eta): " << learning_rate_ << '\n' << "Initial test started..." << std::endl;
   if (test_size_ != 0) Evaluate(-1); // tests the initialized network before
                                      // the training has started
@@ -599,20 +600,23 @@ void ConvolutionalNetwork::Pooling(const unsigned i) {
 
 void ConvolutionalNetwork::Evaluate(const int epoch) {
   unsigned correct = 0, wrong = 0;
-  std::vector<std::string> wrongly_classified_words;
-  wrongly_classified_words.reserve(100);
+  std::forward_list<std::string> wrongly_classified_words;
   for (unsigned i = 0; i < test_size_; ++i) {
     Feedforward(i, true);
     std::vector<double>& output_layer = fully_connected_layers_[num_of_fully_connected_layers_-1];
     if (test_output_[i] == std::distance(output_layer.begin(), std::max_element(output_layer.begin(), output_layer.end())))
       correct++;
     else if (epoch == ((int) epochs_-1) && wrong < 100) {
-      wrongly_classified_words.push_back(words_[1][i]);
+      wrongly_classified_words.push_front(words_[1][i]);
       wrong++;
     }
   }
   std::cout << (epoch+1) << ". epoch, correct results: " << '\n' << '\t' << "Correct results: " << correct << '/' << test_size_ << " (accuracy: " << ((double) correct/(test_size_/100)) << "%)" << std::endl;
-  if (!save_file_.empty() && correct > best_test_result) {
+  if (!save_file_.empty() && correct > best_test_result) { // only the biases
+                                                           // and weights that
+                                                           // lead to the best
+                                                           // result will be
+                                                           // saved
     best_test_result = correct;
     if (epoch != -1)
       SaveWeights();
@@ -630,8 +634,8 @@ void ConvolutionalNetwork::SaveWeights() {
   // layers and the (convolutional) kernels).
   std::ofstream save_file_stream(save_file_);
   save_file_stream << activation_function_in_fully_connected_layers_ << '\n' << s_shaped_vectors_ << '\n' << leaky_ReLU_in_convolutional_layers_ << '\n' << num_of_convolutional_and_pooling_layers_ << '\n' << num_of_feature_maps_ << '\n' << kernel_sizes_[0] << ' ' << kernel_sizes_[1] << '\n';
-  for (unsigned i = 0; i < fully_connected_layer_sizes_.size(); ++i)
-     save_file_stream << fully_connected_layer_sizes_[i] << ((i == (fully_connected_layer_sizes_.size()-1))? '\n' : ' ');
+  for (auto it = fully_connected_layer_sizes_.begin(); it != fully_connected_layer_sizes_.end(); ++it)
+    save_file_stream << *it << ((it == std::prev(fully_connected_layer_sizes_.end()))? '\n' : ' ');
   for (unsigned i = 0; i < num_of_convolutional_and_pooling_layers_; ++i) {
     for (unsigned j = 0; j < num_of_feature_maps_; ++j) {
       for (unsigned k = 0; k < kernel_sizes_[0]; ++k) {
