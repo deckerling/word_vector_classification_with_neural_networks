@@ -246,7 +246,8 @@ std::vector<std::vector<std::vector<double>>> Loader::ReshapeData(const std::vec
     if (prime > vector_size)
       break;
     if (prime == vector_size) {
-      x++;
+      x++; // will add a 0 to the end of the vector in order to make it
+           // possible to transform the vector into a "rectangle"
       break;
     }
   }
