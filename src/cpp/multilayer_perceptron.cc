@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <algorithm>
+#include <forward_list>
 #include <fstream>
 #include <functional>
 #include <random>
@@ -39,13 +40,13 @@ MultilayerPerceptron::MultilayerPerceptron(const std::vector<std::vector<double>
   std::cout << "- Done." << '\n' << "Initializing network..." << std::endl;
   biases_.resize(number_of_neuron_layers_);
   weights_.resize(number_of_neuron_layers_);
-  activations_ = std::vector<std::vector<double>>(number_of_layers_);
-  netinputs_ = std::vector<std::vector<double>>(number_of_neuron_layers_);
-  nabla_w_ = std::vector<std::vector<std::vector<double>>>(number_of_neuron_layers_);
+  activations_.resize(number_of_layers_);
+  netinputs_.resize(number_of_neuron_layers_);
+  nabla_w_.resize(number_of_neuron_layers_);
   (load_file_.empty())? InitializeBiasesAndWeights() : LoadBiasesAndWeights();
   std::cout << "- Done." << '\n' << "Selected hyper-parameters: " << '\n' << '\t' << "Number of layers (including in- and output layer): " << number_of_layers_ << '\n' << '\t' << "Layer sizes: ";
-  for (unsigned i = 0; i < number_of_layers_; ++i)
-    std::cout << layer_sizes_[i] << ((i == (number_of_layers_-1))? '\n' : '/');
+  for (auto it = layer_sizes_.begin(); it != layer_sizes_.end(); ++it)
+    std::cout << *it << ((it == std::prev(layer_sizes_.end()))? '\n' : '/');
   std::cout << '\t' << "Activation function: ";
   switch (activation_function_in_fully_connected_layers_) {
    case 0:
@@ -78,9 +79,9 @@ MultilayerPerceptron::MultilayerPerceptron(const std::vector<std::vector<double>
   std::cout << "- Done." << '\n' << "Loading network..." << std::endl;
   biases_.resize(number_of_neuron_layers_);
   weights_.resize(number_of_neuron_layers_);
-  activations_ = std::vector<std::vector<double>>(number_of_layers_);
-  netinputs_ = std::vector<std::vector<double>>(number_of_neuron_layers_);
-  nabla_w_ = std::vector<std::vector<std::vector<double>>>(number_of_neuron_layers_);
+  activations_.resize(number_of_layers_);
+  netinputs_.resize(number_of_neuron_layers_);
+  nabla_w_.resize(number_of_neuron_layers_);
   LoadBiasesAndWeights();
   std::cout << "- Done." << '\n' << "Starting to classify the inputs..." << std::endl;
   OnDuty();
@@ -102,7 +103,7 @@ void MultilayerPerceptron::InitializeBiasesAndWeights() {
                                              // to the number of neurons the
                                              // weights "lead to"
       std::normal_distribution <> distribution_weights {0, (1/std::sqrt(layer_sizes_[i]))};
-      auto GetRandomWeight = [&distribution_weights, &generator](){return distribution_weights(generator);};
+      auto GetRandomWeight = [&distribution_weights, &generator]() {return distribution_weights(generator);};
       nabla_w_[i].resize(layer_sizes_[i+1]);
       for (unsigned j = 0; j < layer_sizes_[i+1]; ++j) {
         std::vector<double>& temp_weights = weights_[i][j];
@@ -313,8 +314,7 @@ void MultilayerPerceptron::Evaluate(const int epoch) {
   std::cout << (epoch+1) << ". epoch completed.";
   unsigned correct = 0, wrong = 0;
   double cost = 0, sum_of_squared_weights = 0;
-  std::vector<std::string> wrongly_classified_words;
-  wrongly_classified_words.reserve(100);
+  std::forward_list<std::string> wrongly_classified_words;
   for (unsigned i = 0; i < test_size_; ++i) {
     Feedforward(i, true);
     cost += CalculateCost(test_output_[i])/test_size_;
@@ -324,7 +324,7 @@ void MultilayerPerceptron::Evaluate(const int epoch) {
         correct++; // if the desired output is equal to the output neuron with
                    // the highest activation level
       else if (epoch == ((int) epochs_-1) && wrong < 100) {
-        wrongly_classified_words.push_back(words_[1][i]);
+        wrongly_classified_words.push_front(words_[1][i]);
         wrong++;
       }
     }
@@ -376,8 +376,8 @@ void MultilayerPerceptron::SaveWeights() {
   //  the weights of each layer will be saved in a "one dimensional" way!).
   std::ofstream save_file_stream(save_file_);
   save_file_stream << activation_function_in_fully_connected_layers_ << '\n';
-  for (unsigned i = 0; i < number_of_layers_; ++i)
-    save_file_stream << layer_sizes_[i] << ((i == number_of_neuron_layers_)? '\n' : ' ');
+  for (auto it = layer_sizes_.begin(); it != layer_sizes_.end(); ++it)
+    save_file_stream << *it << ((it == std::prev(layer_sizes_.end()))? '\n' : ' ');
   for (unsigned i = 0; i < number_of_neuron_layers_; ++i) {
     for (unsigned j = 0; j < layer_sizes_[i+1]; ++j)
       save_file_stream << biases_[i][j] << ((j == (layer_sizes_[i+1]-1))? "" : " ");
