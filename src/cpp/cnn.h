@@ -61,12 +61,9 @@ class ConvolutionalNetwork : public NeuralNetwork {
 
   bool s_shaped_vectors_;
   unsigned best_test_result = 0;
-  std::vector<std::vector<std::vector<std::vector<double>>>> convolutional_layers_, convolutional_netinputs_;
-  std::vector<std::vector<double>> fully_connected_layers_;
-  std::vector<std::vector<std::vector<std::vector<double>>>> kernels_, nabla_kernels_;
-  std::vector<std::vector<double>> biases_, nabla_b_, fully_connected_netinputs_;
-  std::vector<std::vector<std::vector<std::vector<double>>>> flattening_weights_, flattening_nabla_w_;
+  std::vector<std::vector<double>> fully_connected_layers_, biases_, nabla_b_, fully_connected_netinputs_;
   std::vector<std::vector<std::vector<double>>> weights_, nabla_w_;
+  std::vector<std::vector<std::vector<std::vector<double>>>> convolutional_layers_, convolutional_netinputs_, kernels_, nabla_kernels_, flattening_weights_, flattening_nabla_w_;
 
   void InitializeBiasesWeightsKernels(const bool s_shaped_vectors);
   void LoadBiasesWeightsKernels();
